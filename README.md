@@ -1,2 +1,3 @@
 # Multi-State-Extrapolation
-Program to extrapolate UV/Vis spectra from QM/QM excited state calculations
+This program is written by Sijin Ren (sren@ku.edu). It creates extrapolated UV/Vis spectra from QM/QM excited state calculations. It requires three sub-calculations as in the ONIOM method. The program first builds the spectrum for each sub-calculation as an envelop of Gaussian functions assigned to each transition. Then, the program recognizes all bands in each sub-calculation, and extrapolates the bands position, height, and half-width. The extrapolated spectrum is built by assigning and summing a Gaussian function to each extrapolated band. 
+Repository includes the program (msextra.plx), the user manual, and an example input/output files. 
