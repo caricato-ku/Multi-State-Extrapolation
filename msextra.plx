@@ -1,21 +1,5 @@
 #!/usr/bin/perl
 # project1.plx
-#
-#Copyright (C) 2019 Sijin Ren
-#
-#This program is free software: you can redistribute it and/or modify
-#it under the terms of the GNU General Public License as published by
-#the Free Software Foundation, either version 3 of the License, or
-#(at your option) any later version.
-#
-#This program is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#GNU General Public License for more details.
-#
-#You should have received a copy of the GNU General Public License
-#along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 use warnings;
 use strict;
 use Math::Trig;
@@ -30,6 +14,11 @@ my $rf6;
 my $rf7;
 my $rf8;
 my $rf9;
+my $rf10;
+my $rf11;
+my $rf12;
+my $rf13;
+my $rf14;
 my @eV;
 my @Di;
 my @nstate;
@@ -84,15 +73,22 @@ my $wnew;
 my $wsnew;
 my $changes;
 my $extn;
-my $sdtrl;
-my $sdtmh;
-my $sdtml;
+my $sdtrl=0.2;
+my $sdtmh=0.2;
+my $sdtml=0.2;
+my @sdtrlleft;
+my @sdtrlright;
+my @sdtmhleft;
+my @sdtmhright;
+my @sdtmlleft;
+my @sdtmlright;
+my $plotonly;
 
 if ($#ARGV==1)
 {
- $outfile=$ARGV[1];
+ unless($ARGV[1]=~/plotonly/) {$outfile=$ARGV[1];}
  $file=$ARGV[0];
- ($rf1, $rf2, $rf3,$rf4,$rf5,$rf6,$rf7,$rf8) = OneFileRead($file);
+ ($rf1, $rf2, $rf3,$rf4,$rf5,$rf6,$rf7,$rf8,$rf9,$rf10,$rf11,$rf12,$rf13,$rf14) = OneFileRead($file);
  @eV=@$rf1;
  @Di=@$rf2;
  @nstate=@$rf3;
@@ -101,6 +97,13 @@ if ($#ARGV==1)
  $sdtrl=$$rf6;
  $sdtmh=$$rf7;
  $sdtml=$$rf8;
+ @sdtrlleft=@$rf9;
+ @sdtrlright=@$rf10;
+ @sdtmhleft=@$rf11;
+ @sdtmhright=@$rf12;
+ @sdtmlleft=@$rf13;
+ @sdtmlright=@$rf14;
+
  if($file=~/txt/)
  {
   while($count<$#eV)
@@ -151,9 +154,9 @@ if ($#ARGV==1)
 }
 elsif ($#ARGV==3)
 {
- $outfile=$ARGV[3];
+ unless($ARGV[3]=~/plotonly/) {$outfile=$ARGV[3];}
  $file=$ARGV[0];
- ($rf1, $rf2, $rf3,$rf4,$rf5,$rf6,$rf7,$rf8) = OneFileRead($file);
+ ($rf1, $rf2, $rf3,$rf4,$rf5,$rf6,$rf7,$rf8,$rf9,$rf10,$rf11,$rf12,$rf13,$rf14) = OneFileRead($file);
  @eVrl=@$rf1;
  @Dirl=@$rf2;
  $extn=$$rf4-1;
@@ -161,17 +164,39 @@ elsif ($#ARGV==3)
  $sdtrl=$$rf6;
  $sdtmh=$$rf7;
  $sdtml=$$rf8;
+ # @cutptrl=@$rf9;
+ # @cutptmh=@$rf10;
+ # @cutptml=@$rf11;
+ # @sdtrlmulti=@$rf12;
+ # @sdtmhmulti=@$rf13;
+ # @sdtmlmulti=@$rf14;
+ @sdtrlleft=@$rf9;
+ @sdtrlright=@$rf10;
+ @sdtmhleft=@$rf11;
+ @sdtmhright=@$rf12;
+ @sdtmlleft=@$rf13;
+ @sdtmlright=@$rf14;
 
  $file=$ARGV[1];
- ($rf1, $rf2, $rf3,$rf4,$rf5,$rf6,$rf7,$rf8) = OneFileRead($file);
+ ($rf1, $rf2, $rf3,$rf4,$rf5,$rf6,$rf7,$rf8,$rf9,$rf10,$rf11,$rf12,$rf13,$rf14) = OneFileRead($file);
  @eVmh=@$rf1;
  @Dimh=@$rf2;
 
  $file=$ARGV[2];
- ($rf1, $rf2, $rf3,$rf4,$rf5,$rf6,$rf7,$rf8) = OneFileRead($file);
+ ($rf1, $rf2, $rf3,$rf4,$rf5,$rf6,$rf7,$rf8,$rf9,$rf10,$rf11,$rf12,$rf13,$rf14) = OneFileRead($file);
  @eVml=@$rf1;
  @Diml=@$rf2;
 }
+#print "$sdtrl\n";
+#print "$sdtmh\n";
+#print "$sdtml\n";
+#print "@sdtrlleft\n";
+#print "@sdtrlright\n";
+#print "@sdtmhleft\n";
+#print "@sdtmhright\n";
+#print "@sdtmlleft\n";
+#print "@sdtmlright\n";
+
 %peakrl = PeakFinder(\@eVrl,\@Dirl,\$sigma,\$outrl);
 %peakmh = PeakFinder(\@eVmh,\@Dimh,\$sigma,\$outmh);
 %peakml = PeakFinder(\@eVml,\@Diml,\$sigma,\$outml);
@@ -180,9 +205,46 @@ elsif ($#ARGV==3)
 %peakmh=BandWidthFinder(\%peakmh,\$outmh);
 %peakml=BandWidthFinder(\%peakml,\$outml);
 
-%peakrl=SmallShoulder(\%peakrl,\$outrl,\$sdtrl);
-%peakmh=SmallShoulder(\%peakmh,\$outmh,\$sdtmh);
-%peakml=SmallShoulder(\%peakml,\$outml,\$sdtml);
+if($ARGV[$#ARGV]=~/plotonly/)
+{
+ @npeaksrl = keys (%peakrl);
+ @npeaksrl = sort {$a<=>$b} @npeaksrl;
+ @npeaksmh = keys (%peakmh);
+ @npeaksmh = sort {$a<=>$b} @npeaksmh;
+ @npeaksml = keys (%peakml);
+ @npeaksml = sort {$a<=>$b} @npeaksml;
+ print "number of peaks on rl spectrum=",($#npeaksrl+1),"\n";
+ print "number of peaks on mh spectrum=",($#npeaksmh+1),"\n";
+ print "number of peaks on ml spectrum=",($#npeaksml+1),"\n";
+ print Dumper(\%peakrl);
+ print Dumper(\%peakmh);
+ print Dumper(\%peakml);
+ open (OUTBANDS, '>'.$outbands) or die ("error");
+ print OUTBANDS "number of peaks on rl spectrum=",($#npeaksrl+1),"\n";
+ print OUTBANDS "number of peaks on mh spectrum=",($#npeaksmh+1),"\n";
+ print OUTBANDS "number of peaks on ml spectrum=",($#npeaksml+1),"\n";
+ print OUTBANDS Dumper(\%peakrl);
+ print OUTBANDS Dumper(\%peakmh);
+ print OUTBANDS Dumper(\%peakml);
+ close OUTBANDS;
+ exit;
+}
+
+if(@sdtrlleft && $sdtrlleft[$#sdtrlleft]!~/#/){%peakrl=SmallShoulderrange(\%peakrl,\$outrl,\@sdtrlleft,\@sdtrlright,\$sdtrl);}
+else
+{
+ if($sdtrl=~/^[0-9,.E]+$/) {%peakrl=SmallShoulder(\%peakrl,\$outrl,\$sdtrl);}
+}
+if(@sdtmhleft && $sdtmhleft[$#sdtmhleft]!~/#/){%peakmh=SmallShoulderrange(\%peakmh,\$outmh,\@sdtmhleft,\@sdtmhright,\$sdtmh);}
+else
+{
+ if($sdtmh=~/^[0-9,.E]+$/) {%peakmh=SmallShoulder(\%peakmh,\$outmh,\$sdtmh);}
+}
+if(@sdtmlleft && $sdtmlleft[$#sdtmlleft]!~/#/){%peakml=SmallShoulderrange(\%peakml,\$outml,\@sdtmlleft,\@sdtmlright,\$sdtml);}
+else
+{
+ if($sdtml=~/^[0-9,.E]+$/) {%peakml=SmallShoulder(\%peakml,\$outml,\$sdtml);}
+}
 
 @npeaksrl = keys (%peakrl);
 @npeaksrl = sort {$a<=>$b} @npeaksrl;
@@ -302,19 +364,40 @@ while($count<=$extn)
 }
 $count=0;
 
+print Dumper(\%peakrl);
+print Dumper(\%peakmh);
+print Dumper(\%peakml);
 open (OUTBANDS, '>'.$outbands) or die ("error");
-print OUTBANDS "Real Low\n",Dumper(\%peakrl);
-print OUTBANDS "Model High\n",Dumper(\%peakmh);
-print OUTBANDS "Model Low\n",Dumper(\%peakml);
+print OUTBANDS Dumper(\%peakrl);
+print OUTBANDS Dumper(\%peakmh);
+print OUTBANDS Dumper(\%peakml);
 close OUTBANDS;
 
-while($count<=$extn)
+#while($count<=$extn)   for regular peak extrapolation
+#{
+# $xpeak[$count]=$peakrl{$npeaksrl[$count]}[0]+$peakmh{$npeaksmh[$count]}[0]-$peakml{$npeaksml[$count]}[0];
+# $ypeak[$count]=$peakrl{$npeaksrl[$count]}[1]+$peakmh{$npeaksmh[$count]}[1]-$peakml{$npeaksml[$count]}[1];
+# $hbw[$count]=$peakrl{$npeaksrl[$count]}[2]+$peakmh{$npeaksmh[$count]}[2]-$peakml{$npeaksml[$count]}[2];
+# $count++;
+#}
+while($count<=$extn)  #for skiping a specific band in extrapolation
 {
  $xpeak[$count]=$peakrl{$npeaksrl[$count]}[0]+$peakmh{$npeaksmh[$count]}[0]-$peakml{$npeaksml[$count]}[0];
  $ypeak[$count]=$peakrl{$npeaksrl[$count]}[1]+$peakmh{$npeaksmh[$count]}[1]-$peakml{$npeaksml[$count]}[1];
  $hbw[$count]=$peakrl{$npeaksrl[$count]}[2]+$peakmh{$npeaksmh[$count]}[2]-$peakml{$npeaksml[$count]}[2];
+ if($count>=1)
+ {
+  $xpeak[$count]=$peakrl{$npeaksrl[$count]}[0]+$peakmh{$npeaksmh[$count+1]}[0]-$peakml{$npeaksml[$count]}[0];
+  $ypeak[$count]=$peakrl{$npeaksrl[$count]}[1]+$peakmh{$npeaksmh[$count+1]}[1]-$peakml{$npeaksml[$count]}[1];
+  $hbw[$count]=$peakrl{$npeaksrl[$count]}[2]+$peakmh{$npeaksmh[$count+1]}[2]-$peakml{$npeaksml[$count]}[2];
+ }
  $count++;
 }
+#first while has to be off if second while is on
+#adjust n in $npeaks...[$count+n] to decide which band to skip
+#count start at 0
+#this currently is skipping the second band in mh spectrum
+
 $count=0;
 if ($xpeak[0]-5<0) {$xstart=0;}
 else {$xstart=$xpeak[0]-5;}
@@ -365,6 +448,12 @@ sub OneFileRead
  my $sdtrl=0.1;
  my $sdtmh=0.1;
  my $sdtml=0.1;
+ my @sdtrlleft;
+ my @sdtrlright;
+ my @sdtmhleft;
+ my @sdtmhright;
+ my @sdtmlleft;
+ my @sdtmlright;
 
 $file=$_[0];
 if($file=~/txt/)
@@ -408,15 +497,106 @@ else
  close (FILE);
  while ($count <= $#array)
  {
-  if ($array[$count]=~/extn/ || $array[$count]=~/sdrl/ || $array[$count]=~/sdmh/ || $array[$count]=~/sdml/ || $array[$count]=~/sigma/ || $array[$count]=~/sdt/)
+	 #  if ($array[$count]=~/extn/ || $array[$count]=~/sdrl/ || $array[$count]=~/sdmh/ || $array[$count]=~/sdml/ || $array[$count]=~/sigma/ || $array[$count]=~/sdt/)
+  if ($array[$count]=~/extn/ || $array[$count]=~/sd/ || $array[$count]=~/sigma/)
   {
    @sep=split(/,/, $array[$count]);
    chomp ($sep[0]);
    if($sep[0]=~/extn/){chomp($sep[1]); $extn=$sep[1];}
-   elsif($sep[0]=~/sigma/){chomp($sep[1]); $sigma=$sep[1];}
-   elsif($sep[0]=~/sdtrl/){chomp($sep[1]); $sdtrl=$sep[1];}
-   elsif($sep[0]=~/sdtmh/){chomp($sep[1]); $sdtmh=$sep[1];}
-   elsif($sep[0]=~/sdtml/){chomp($sep[1]); $sdtml=$sep[1];}
+   if($sep[0]=~/sigma/){chomp($sep[1]); $sigma=$sep[1];}
+   if($sep[0]=~/sdtrl/ && $sep[0]!~/sdtrlleft/ && $sep[0]!~/sdtrlright/){chomp($sep[1]); $sdtrl=$sep[1];}
+   if($sep[0]=~/sdtmh/ && $sep[0]!~/sdtmhleft/ && $sep[0]!~/sdtmhright/){chomp($sep[1]); $sdtmh=$sep[1];}
+   if($sep[0]=~/sdtml/ && $sep[0]!~/sdtmlleft/ && $sep[0]!~/sdtmlright/){chomp($sep[1]); $sdtml=$sep[1];}
+   #   if($sep[0]=~/cutptrl/)
+   #   {
+   #    while($num<$#sep)   
+   #    {
+   #     chomp($sep[$num+1]);
+   #     push(@cutptrl,$sep[$num+1]);
+   #     $num++;
+   #    }
+   #    $num=0;
+   #   }
+   #   if($sep[0]=~/cutptmh/)
+   #   {
+   #    while($num<$#sep)   
+   #    {
+   #     chomp($sep[$num+1]);
+   #     push(@cutptmh,$sep[$num+1]);
+   #     $num++;
+   #    }
+   #    $num=0;
+   #   }
+   #   if($sep[0]=~/cutptml/)
+   #   {
+   #    while($num<$#sep)   
+   #    {
+   #     chomp($sep[$num+1]);
+   #     push(@cutptml,$sep[$num+1]);
+   #     $num++;
+   #    }
+   #    $num=0;
+   #   }
+   if($sep[0]=~/sdtrlleft/)
+   {
+    while($num<$#sep)   
+    {
+     chomp($sep[$num+1]);
+     push(@sdtrlleft,$sep[$num+1]);
+     $num++;
+    }
+    $num=0;
+   }
+   if($sep[0]=~/sdtrlright/)
+   {
+    while($num<$#sep)   
+    {
+     chomp($sep[$num+1]);
+     push(@sdtrlright,$sep[$num+1]);
+     $num++;
+    }
+    $num=0;
+   }
+   if($sep[0]=~/sdtmhleft/)
+   {
+    while($num<$#sep)   
+    {
+     chomp($sep[$num+1]);
+     push(@sdtmhleft,$sep[$num+1]);
+     $num++;
+    }
+    $num=0;
+   }
+   if($sep[0]=~/sdtmhright/)
+   {
+    while($num<$#sep)   
+    {
+     chomp($sep[$num+1]);
+     push(@sdtmhright,$sep[$num+1]);
+     $num++;
+    }
+    $num=0;
+   }
+   if($sep[0]=~/sdtmlleft/)
+   {
+    while($num<$#sep)   
+    {
+     chomp($sep[$num+1]);
+     push(@sdtmlleft,$sep[$num+1]);
+     $num++;
+    }
+    $num=0;
+   }
+   if($sep[0]=~/sdtmlright/)
+   {
+    while($num<$#sep)   
+    {
+     chomp($sep[$num+1]);
+     push(@sdtmlright,$sep[$num+1]);
+     $num++;
+    }
+    $num=0;
+   }
   }  
   elsif ($array[$count] =~ /#p/ && $count < 150)
   {
@@ -470,7 +650,7 @@ else
    $num++;
  }
  $num = 0;
- return (\@eV, \@Di, \@nstate, \$extn, \$sigma, \$sdtrl, \$sdtmh, \$sdtml);
+ return (\@eV, \@Di, \@nstate, \$extn, \$sigma, \$sdtrl, \$sdtmh, \$sdtml,\@sdtrlleft,\@sdtrlright,\@sdtmhleft,\@sdtmhright,\@sdtmlleft,\@sdtmlright);
 }
 
 #*************************************subroutine****************PeakFinder*************************subroutine*****************************************
@@ -668,7 +848,7 @@ sub BandWidthFinder
    }
    $n=0;
    $flag=0;
-   if ($wleft==0 && $wright==0) {$peaks{$npeak}[2]=0.4;}
+   if ($wleft==0 && $wright==0) {$peaks{$npeak}[2]=0.4444;}
    elsif ($wright>=$wleft && $wleft!=0) {$peaks{$npeak}[2]=$wleft;}
    elsif ($wleft>=$wright && $wright!=0) {$peaks{$npeak}[2]=$wright;}
    elsif ($wleft==0) {$peaks{$npeak}[2]=$wright;}
@@ -711,6 +891,7 @@ sub SmallShoulder
  my $ydiff;
  my $ydiffmax=0;
  my $sdt=0.2;
+ my $nshoulderorig;
 
  %peaks = %$ref1;
  $file = $$ref2;
@@ -739,6 +920,7 @@ sub SmallShoulder
    if ($hbwreal-$hbwgauss>=$sdt)
    {
     $nshoulder=$npeak-$n;
+    $nshoulderorig=$nshoulder;
     $find=1;
     while ($flag==0)
     {
@@ -761,7 +943,13 @@ sub SmallShoulder
       }
       else
       {
-       $flag=1; 
+       $nshoulder=$nshoulderorig;
+       $peaks{$nshoulder}[0]=$x[$nshoulder];
+       $peaks{$nshoulder}[1]=$y[$nshoulder];
+       $peaks{$nshoulder}[3]=$npeak;
+       $epsheight=$peaks{$nshoulder}[1]/exp(1);
+       $hbwepsgauss=sqrt(-log($epsheight/$peaks{$nshoulder}[1]))*$peaks{$npeak}[2];
+       $flag=2;
       }
      }
     }
@@ -814,6 +1002,7 @@ sub SmallShoulder
    if ($hbwreal-$hbwgauss>=$sdt)
    {
     $nshoulder=$npeak+$n;
+    $nshoulderorig=$nshoulder;
     $find=1;
     while ($flag==0)
     {
@@ -836,7 +1025,13 @@ sub SmallShoulder
       }
       else
       {
-        $flag=1;
+      $nshoulder=$nshoulderorig;
+      $peaks{$nshoulder}[0]=$x[$nshoulder];
+      $peaks{$nshoulder}[1]=$y[$nshoulder];
+      $peaks{$nshoulder}[3]=$npeak;
+      $epsheight=$peaks{$nshoulder}[1]/exp(1);
+      $hbwepsgauss=sqrt(-log($epsheight/$peaks{$nshoulder}[1]))*$peaks{$npeak}[2];
+      $flag=2;
       }
      }
     }
@@ -888,6 +1083,410 @@ sub SmallShoulder
  return (%peaks);
 }
 
+#subroutine****************SmallShoulderrange*************************subroutine*****************************************
+#This subroutine find out shoulder under each peak
+sub SmallShoulderrange
+{
+ my $file;
+ my @lines;
+ my @x;
+ my @y;
+ my @sep;
+ my ($ref1,$ref2,$ref3,$ref4,$ref5)=@_;
+ my @npeaks;
+ my $count=0;
+ my $npeak;
+ my $sigma;
+ my $n=0;
+ my $num=0;
+ my $flag=0;
+ my %peaks;
+ my $hbwreal;
+ my $hbwgauss;
+ my $nshoulder;
+ my $epsheight;
+ my $hbwepsgauss;
+ my $hbwepsreal;
+ my $find=0;
+ my $ydiff;
+ my $ydiffmax=0;
+ my $sdt=0.2;
+ my $nshoulderorig;
+ # my @cutpt;
+ my @sdtleft;
+ my @sdtright;
+
+ %peaks = %$ref1;
+ $file = $$ref2;
+ @sdtleft=@$ref3;
+ @sdtright=@$ref4;
+ $sdt=$$ref5;
+
+
+ open (FILE, $file) or die ("error");
+ @lines = <FILE>;
+ close FILE;
+ foreach (@lines)
+ {
+  @sep = split(/ /, $_);
+  push (@x, $sep[0]);
+  chomp ($sep[1]);
+  push (@y, $sep[1]);
+ }
+ @npeaks = keys(%peaks);
+ @npeaks = sort {$a<=>$b} @npeaks;
+ while ($count<=$#npeaks)
+ {
+  $npeak=$npeaks[$count];
+  $n=0;
+  if($sdtleft[$count] =~ /^[0-9,.E]+$/)
+  {
+   while ($y[$npeak-$n-1]<=$y[$npeak-$n] && $y[$npeak-$n]>0 && $find==0)
+   {
+    $hbwreal=$x[$npeak]-$x[$npeak-$n];
+    $hbwgauss=sqrt(-log($y[$npeak-$n]/$y[$npeak]))*$peaks{$npeak}[2];
+    if ($hbwreal-$hbwgauss>=$sdtleft[$count])
+    {
+     $nshoulder=$npeak-$n;
+     $nshoulderorig=$nshoulder;
+     $find=1;
+     while ($flag==0)
+     {
+      if ($y[$nshoulder-$num-1] < $y[$nshoulder-$num])
+      {
+       $ydiff=$y[$nshoulder-$num]-$peaks{$npeak}[1]*exp(-(($x[$nshoulder-$num]-$peaks{$npeak}[0])/$peaks{$npeak}[2])**2);
+       if ($ydiff > $ydiffmax) {$ydiffmax=$ydiff; $nshoulder=$nshoulder-$num;}
+       $num++;
+      }
+      else
+      {
+       if ($ydiff!=$ydiffmax)
+       {
+        $peaks{$nshoulder}[0]=$x[$nshoulder];
+        $peaks{$nshoulder}[1]=$y[$nshoulder];
+        $peaks{$nshoulder}[3]=$npeak;
+        $epsheight=$peaks{$nshoulder}[1]/exp(1);
+        $hbwepsgauss=sqrt(-log($epsheight/$peaks{$nshoulder}[1]))*$peaks{$npeak}[2];
+        $flag=2;
+       }
+       else
+       {
+        $nshoulder=$nshoulderorig;
+        $peaks{$nshoulder}[0]=$x[$nshoulder];
+        $peaks{$nshoulder}[1]=$y[$nshoulder];
+        $peaks{$nshoulder}[3]=$npeak;
+        $epsheight=$peaks{$nshoulder}[1]/exp(1);
+        $hbwepsgauss=sqrt(-log($epsheight/$peaks{$nshoulder}[1]))*$peaks{$npeak}[2];
+        $flag=2;
+       }
+      }
+     }
+     $num=0;
+     while ($flag==2)
+     {
+      if ($y[$nshoulder-$num-1] <= $y[$nshoulder-$num])
+      {
+       if (($y[$nshoulder-$num-1]-$epsheight)**2 >= ($y[$nshoulder-$num]-$epsheight)**2)
+       {
+        $hbwepsreal=$x[$npeak]-$x[$nshoulder-$num];
+        $peaks{$nshoulder}[2]=($hbwepsreal-$hbwepsgauss);
+        if ($peaks{$nshoulder}[2]<0.05) {$peaks{$nshoulder}[2]=0.4;}
+        $flag=1;
+       }
+       else {$num++;}
+      }
+      else
+      {
+       $epsheight=$epsheight*2;
+       $num=0;
+       while ($flag==2)
+       {
+        if ($y[$nshoulder-$num-1] <= $y[$nshoulder-$num])
+        {
+         if (($y[$nshoulder-$num-1]-$epsheight)**2 >= ($y[$nshoulder-$num]-$epsheight)**2)
+         {
+          $hbwepsreal=$x[$npeak]-$x[$nshoulder-$num];
+          $peaks{$nshoulder}[2]=($hbwepsreal-$hbwepsgauss)/sqrt(-log(2*exp(-1)));
+          if ($peaks{$nshoulder}[2]<0.05) {$peaks{$nshoulder}[2]=$peaks{$npeak}[2];}
+          $flag=1;
+         }
+         else {$num++;}
+        }
+        else {$peaks{$nshoulder}[2]=0.4; $flag=1;} #$peaks{$npeak}[2]; $flag=1;}
+       }
+      }
+     }
+    }
+   $n++;
+   }
+   $n=0;
+   $num=0;
+   $flag=0;
+   $find=0;
+  }
+  elsif($sdtleft[$count] =~ /df/)
+  {
+   print "using df\n";
+   $sdtleft[$count]=$sdt;
+   while ($y[$npeak-$n-1]<=$y[$npeak-$n] && $y[$npeak-$n]>0 && $find==0)
+   {
+    $hbwreal=$x[$npeak]-$x[$npeak-$n];
+    $hbwgauss=sqrt(-log($y[$npeak-$n]/$y[$npeak]))*$peaks{$npeak}[2];
+    if ($hbwreal-$hbwgauss>=$sdtleft[$count])
+    {
+     $nshoulder=$npeak-$n;
+     $nshoulderorig=$nshoulder;
+     $find=1;
+     while ($flag==0)
+     {
+      if ($y[$nshoulder-$num-1] < $y[$nshoulder-$num])
+      {
+       $ydiff=$y[$nshoulder-$num]-$peaks{$npeak}[1]*exp(-(($x[$nshoulder-$num]-$peaks{$npeak}[0])/$peaks{$npeak}[2])**2);
+       if ($ydiff > $ydiffmax) {$ydiffmax=$ydiff; $nshoulder=$nshoulder-$num;}
+       $num++;
+      }
+      else
+      {
+       if ($ydiff!=$ydiffmax)
+       {
+        $peaks{$nshoulder}[0]=$x[$nshoulder];
+        $peaks{$nshoulder}[1]=$y[$nshoulder];
+        $peaks{$nshoulder}[3]=$npeak;
+        $epsheight=$peaks{$nshoulder}[1]/exp(1);
+        $hbwepsgauss=sqrt(-log($epsheight/$peaks{$nshoulder}[1]))*$peaks{$npeak}[2];
+        $flag=2;
+       }
+       else
+       {
+        $nshoulder=$nshoulderorig;
+        $peaks{$nshoulder}[0]=$x[$nshoulder];
+        $peaks{$nshoulder}[1]=$y[$nshoulder];
+        $peaks{$nshoulder}[3]=$npeak;
+        $epsheight=$peaks{$nshoulder}[1]/exp(1);
+        $hbwepsgauss=sqrt(-log($epsheight/$peaks{$nshoulder}[1]))*$peaks{$npeak}[2];
+        $flag=2;
+       }
+      }
+     }
+     $num=0;
+     while ($flag==2)
+     {
+      if ($y[$nshoulder-$num-1] <= $y[$nshoulder-$num])
+      {
+       if (($y[$nshoulder-$num-1]-$epsheight)**2 >= ($y[$nshoulder-$num]-$epsheight)**2)
+       {
+        $hbwepsreal=$x[$npeak]-$x[$nshoulder-$num];
+        $peaks{$nshoulder}[2]=($hbwepsreal-$hbwepsgauss);
+        if ($peaks{$nshoulder}[2]<0.05) {$peaks{$nshoulder}[2]=0.4;}
+        $flag=1;
+       }
+       else {$num++;}
+      }
+      else
+      {
+       $epsheight=$epsheight*2;
+       $num=0;
+       while ($flag==2)
+       {
+        if ($y[$nshoulder-$num-1] <= $y[$nshoulder-$num])
+        {
+         if (($y[$nshoulder-$num-1]-$epsheight)**2 >= ($y[$nshoulder-$num]-$epsheight)**2)
+         {
+          $hbwepsreal=$x[$npeak]-$x[$nshoulder-$num];
+          $peaks{$nshoulder}[2]=($hbwepsreal-$hbwepsgauss)/sqrt(-log(2*exp(-1)));
+          if ($peaks{$nshoulder}[2]<0.05) {$peaks{$nshoulder}[2]=$peaks{$npeak}[2];}
+          $flag=1;
+         }
+         else {$num++;}
+        }
+        else {$peaks{$nshoulder}[2]=0.4; $flag=1;} #$peaks{$npeak}[2]; $flag=1;}
+       }
+      }
+     }
+    }
+   $n++;
+   }
+   $n=0;
+   $num=0;
+   $flag=0;
+   $find=0;
+  }
+  if($sdtright[$count] =~ /^[0-9,.E]+$/)
+  {
+   while ($y[$npeak+$n+1]<=$y[$npeak+$n] && $y[$npeak+$n+1]>0 && $find==0)
+   {
+    $hbwreal=$x[$npeak+$n]-$x[$npeak];
+    $hbwgauss=sqrt(-log($y[$npeak+$n]/$y[$npeak]))*$peaks{$npeak}[2];
+    if ($hbwreal-$hbwgauss>=$sdtright[$count])
+    {
+     $nshoulder=$npeak+$n;
+     $nshoulderorig=$nshoulder;
+     $find=1;
+     while ($flag==0)
+     {
+      if ($y[$nshoulder+$num+1] < $y[$nshoulder+$num])
+      {
+       $ydiff=$y[$nshoulder+$num]-$peaks{$npeak}[1]*exp(-(($x[$nshoulder+$num]-$peaks{$npeak}[0])/$peaks{$npeak}[2])**2);
+       if ($ydiff > $ydiffmax) {$ydiffmax=$ydiff; $nshoulder=$nshoulder+$num;}
+       $num++;
+      }
+      else
+      {
+       if ($ydiff!=$ydiffmax)
+       {
+       $peaks{$nshoulder}[0]=$x[$nshoulder];
+       $peaks{$nshoulder}[1]=$y[$nshoulder];
+       $peaks{$nshoulder}[3]=$npeak;
+       $epsheight=$peaks{$nshoulder}[1]/exp(1);
+       $hbwepsgauss=sqrt(-log($epsheight/$peaks{$nshoulder}[1]))*$peaks{$npeak}[2];
+       $flag=2;
+       }
+       else
+       {
+       $nshoulder=$nshoulderorig;
+       $peaks{$nshoulder}[0]=$x[$nshoulder];
+       $peaks{$nshoulder}[1]=$y[$nshoulder];
+       $peaks{$nshoulder}[3]=$npeak;
+       $epsheight=$peaks{$nshoulder}[1]/exp(1);
+       $hbwepsgauss=sqrt(-log($epsheight/$peaks{$nshoulder}[1]))*$peaks{$npeak}[2];
+       $flag=2;
+       }
+      }
+     }
+     $num=0;
+     while ($flag==2)
+     {
+      if ($y[$nshoulder+$num+1] <= $y[$nshoulder+$num])
+      {
+       if (($y[$nshoulder+$num+1]-$epsheight)**2 >= ($y[$nshoulder+$num]-$epsheight)**2)
+       {
+        $hbwepsreal=$x[$nshoulder+$num]-$x[$npeak];
+        $peaks{$nshoulder}[2]=$hbwepsreal-$hbwepsgauss;
+        if ($peaks{$nshoulder}[2]<0.05) {$peaks{$nshoulder}[2]=0.4;}
+        $flag=1;
+       }
+       else {$num++;}
+      }
+      else
+      {
+       $epsheight=$epsheight*2;
+       $num=0;
+       while ($flag==2)
+       {
+        if ($y[$nshoulder+$num+1] <= $y[$nshoulder+$num])
+        {
+         if (($y[$nshoulder+$num+1]-$epsheight)**2 >= ($y[$nshoulder+$num]-$epsheight)**2)
+         {
+          $hbwepsreal=$x[$nshoulder+$num]-$x[$npeak];
+          $peaks{$nshoulder}[2]=($hbwepsreal-$hbwepsgauss)/sqrt(-log(2*exp(-1)));
+          if ($peaks{$nshoulder}[2]<0.05) {$peaks{$nshoulder}[2]=$peaks{$npeak}[2];}
+          $flag=1;
+         }
+         else {$num++;}
+        }
+        else {$peaks{$nshoulder}[2]=0.4; $flag=1;} #$peaks{$npeak}[2]; $flag=1;}
+       }
+      }
+     }
+    }
+    $n++;
+   }
+   $n=0;
+   $num=0;
+   $flag=0;
+   $find=0;
+  }
+  elsif($sdtright[$count] =~ /df/)
+  {
+   $sdtright[$count]=$sdt;
+   while ($y[$npeak+$n+1]<=$y[$npeak+$n] && $y[$npeak+$n+1]>0 && $find==0)
+   {
+    $hbwreal=$x[$npeak+$n]-$x[$npeak];
+    $hbwgauss=sqrt(-log($y[$npeak+$n]/$y[$npeak]))*$peaks{$npeak}[2];
+    if ($hbwreal-$hbwgauss>=$sdtright[$count])
+    {
+     $nshoulder=$npeak+$n;
+     $nshoulderorig=$nshoulder;
+     $find=1;
+     while ($flag==0)
+     {
+      if ($y[$nshoulder+$num+1] < $y[$nshoulder+$num])
+      {
+       $ydiff=$y[$nshoulder+$num]-$peaks{$npeak}[1]*exp(-(($x[$nshoulder+$num]-$peaks{$npeak}[0])/$peaks{$npeak}[2])**2);
+       if ($ydiff > $ydiffmax) {$ydiffmax=$ydiff; $nshoulder=$nshoulder+$num;}
+       $num++;
+      }
+      else
+      {
+       if ($ydiff!=$ydiffmax)
+       {
+       $peaks{$nshoulder}[0]=$x[$nshoulder];
+       $peaks{$nshoulder}[1]=$y[$nshoulder];
+       $peaks{$nshoulder}[3]=$npeak;
+       $epsheight=$peaks{$nshoulder}[1]/exp(1);
+       $hbwepsgauss=sqrt(-log($epsheight/$peaks{$nshoulder}[1]))*$peaks{$npeak}[2];
+       $flag=2;
+       }
+       else
+       {
+       $nshoulder=$nshoulderorig;
+       $peaks{$nshoulder}[0]=$x[$nshoulder];
+       $peaks{$nshoulder}[1]=$y[$nshoulder];
+       $peaks{$nshoulder}[3]=$npeak;
+       $epsheight=$peaks{$nshoulder}[1]/exp(1);
+       $hbwepsgauss=sqrt(-log($epsheight/$peaks{$nshoulder}[1]))*$peaks{$npeak}[2];
+       $flag=2;
+       }
+      }
+     }
+     $num=0;
+     while ($flag==2)
+     {
+      if ($y[$nshoulder+$num+1] <= $y[$nshoulder+$num])
+      {
+       if (($y[$nshoulder+$num+1]-$epsheight)**2 >= ($y[$nshoulder+$num]-$epsheight)**2)
+       {
+        $hbwepsreal=$x[$nshoulder+$num]-$x[$npeak];
+        $peaks{$nshoulder}[2]=$hbwepsreal-$hbwepsgauss;
+        if ($peaks{$nshoulder}[2]<0.05) {$peaks{$nshoulder}[2]=0.4;}
+        $flag=1;
+       }
+       else {$num++;}
+      }
+      else
+      {
+       $epsheight=$epsheight*2;
+       $num=0;
+       while ($flag==2)
+       {
+        if ($y[$nshoulder+$num+1] <= $y[$nshoulder+$num])
+        {
+         if (($y[$nshoulder+$num+1]-$epsheight)**2 >= ($y[$nshoulder+$num]-$epsheight)**2)
+         {
+          $hbwepsreal=$x[$nshoulder+$num]-$x[$npeak];
+          $peaks{$nshoulder}[2]=($hbwepsreal-$hbwepsgauss)/sqrt(-log(2*exp(-1)));
+          if ($peaks{$nshoulder}[2]<0.05) {$peaks{$nshoulder}[2]=$peaks{$npeak}[2];}
+          $flag=1;
+         }
+         else {$num++;}
+        }
+        else {$peaks{$nshoulder}[2]=0.4; $flag=1;} #$peaks{$npeak}[2]; $flag=1;}
+       }
+      }
+     }
+    }
+    $n++;
+   }
+   $n=0;
+   $num=0;
+   $flag=0;
+   $find=0;
+  }
+  $count++;
+ }
+ $count=0;
+ return (%peaks);
+}
 
 
 
